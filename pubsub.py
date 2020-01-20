@@ -45,18 +45,6 @@ def create_topic(project_id, topic_name):
     print('Topic created: {}'.format(topic))
 
 
-def delete_topic(project_id, topic_name):
-    """Deletes an existing Pub/Sub topic."""
-    from google.cloud import pubsub_v1
-
-    publisher = pubsub_v1.PublisherClient()
-    topic_path = publisher.topic_path(project_id, topic_name)
-
-    publisher.delete_topic(topic_path)
-
-    print('Topic deleted: {}'.format(topic_path))
-
-
 def publish_messages(project_id, topic_name, data):
     """Publishes a message from stdin to a Pub/Sub topic."""
     from google.cloud import pubsub_v1
@@ -112,23 +100,6 @@ def create_subscription(project_id, topic_name, subscription_name):
 
     print('Subscription created: {}'.format(subscription))
 
-def delete_subscription(project_id, subscription_name):
-    """Deletes an existing Pub/Sub topic."""
-    # [START pubsub_delete_subscription]
-    from google.cloud import pubsub_v1
-
-    # TODO project_id = "Your Google Cloud Project ID"
-    # TODO subscription_name = "Your Pub/Sub subscription name"
-
-    subscriber = pubsub_v1.SubscriberClient()
-    subscription_path = subscriber.subscription_path(
-        project_id, subscription_name)
-
-    subscriber.delete_subscription(subscription_path)
-
-    print('Subscription deleted: {}'.format(subscription_path))
-    # [END pubsub_delete_subscription]
-
 def receive_messages(project_id, subscription_name):
     """Receives messages from a pull subscription."""
     # [START pubsub_subscriber_async_pull]
@@ -171,11 +142,8 @@ if __name__ == "__main__":
     subparsers = parser.add_subparsers(dest='command')
     subparsers.add_parser('list', help=list_topics.__doc__)
 
-    create_parser = subparsers.add_parser('create-topic', help=create_topic.__doc__)
-    create_parser.add_argument('topic-name')
-
-    delete_parser = subparsers.add_parser('delete-topic', help=delete_topic.__doc__)
-    delete_parser.add_argument('topic-name')
+    create_topic_parser = subparsers.add_parser('create-topic', help=create_topic.__doc__)
+    create_topic_parser.add_argument('topic-name')
 
     publish_parser = subparsers.add_parser('publish', help=publish_messages.__doc__)
     publish_parser.add_argument('topic-name')
@@ -186,12 +154,9 @@ if __name__ == "__main__":
 
     list_in_project_parser = subparsers.add_parser('list-subscriptions-in-project', help=list_subscriptions_in_project.__doc__)
 
-    create_parser = subparsers.add_parser('create-subscription', help=create_subscription.__doc__)
-    create_parser.add_argument('topic-name')
-    create_parser.add_argument('subscription-name')
-
-    delete_parser = subparsers.add_parser('delete-subscription', help=delete_subscription.__doc__)
-    delete_parser.add_argument('subscription-name')
+    create_sub_parser = subparsers.add_parser('create-subscription', help=create_subscription.__doc__)
+    create_sub_parser.add_argument('topic-name')
+    create_sub_parser.add_argument('subscription-name')
 
     receive_parser = subparsers.add_parser('receive-messages', help=receive_messages.__doc__)
     receive_parser.add_argument('subscription-name')
@@ -202,8 +167,6 @@ if __name__ == "__main__":
         list_topics(args.project_id)
     elif args.command == 'create-topic':
         create_topic(args.project_id, args.topic_name)
-    elif args.command == 'delete-topic':
-        delete_topic(args.project_id, args.topic_name)
     elif args.command == 'publish':
         publish_messages(args.project_id, args.topic_name, args.message)
     elif args.command == 'list-subscriptions-in-topic':
@@ -213,8 +176,5 @@ if __name__ == "__main__":
     elif args.command == 'create-subscription':
         create_subscription(
             args.project_id, args.topic_name, args.subscription_name)
-    elif args.command == 'delete-subscription':
-        delete_subscription(
-            args.project_id, args.subscription_name)
     elif args.command == 'receive-messages':
         receive_messages(args.project_id, args.subscription_name)

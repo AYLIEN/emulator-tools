@@ -54,36 +54,6 @@ def create_table(project_id, instance_id, table_id):
 
     return client, instance, table
 
-def delete_table(project_id, instance_id, table_id):
-    ''' Delete bigtable.
-
-    :type project_id: str
-    :param project_id: Project id of the client.
-
-    :type instance_id: str
-    :param instance_id: Instance of the client.
-
-    :type table_id: str
-    :param table_id: Table id to create table.
-    '''
-
-    client = bigtable.Client(project=project_id, admin=True)
-    instance = client.instance(instance_id)
-    table = instance.table(table_id)
-
-    # [START bigtable_delete_table]
-    # Delete the entire table
-
-    print('Checking if table {} exists...'.format(table_id))
-    if table.exists():
-        print('Table {} exists.'.format(table_id))
-        print('Deleting {} table.'.format(table_id))
-        table.delete()
-        print('Deleted {} table.'.format(table_id))
-    else:
-        print('Table {} does not exists.'.format(table_id))
-    # [END bigtable_delete_table]
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -91,7 +61,7 @@ if __name__ == '__main__':
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('command',
-                        help='create or delete. \
+                        help='create. \
                         Operation to perform on table.')
     parser.add_argument(
         '--table',
@@ -108,8 +78,6 @@ if __name__ == '__main__':
 
     if args.command.lower() == 'create':
         create_table(args.project_id, args.instance_id, args.table)
-    elif args.command.lower() == 'delete':
-        delete_table(args.project_id, args.instance_id, args.table)
     else:
-        print('Command should be either create or delete.\n Use argument -h,\
+        print('Command should be either create.\n Use argument -h,\
                --help to show help and exit.')
