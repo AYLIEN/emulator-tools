@@ -137,29 +137,29 @@ if __name__ == "__main__":
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument('project-id', help='Your Google Cloud project ID')
+    parser.add_argument('project_id', help='Your Google Cloud project ID')
 
     subparsers = parser.add_subparsers(dest='command')
-    subparsers.add_parser('list', help=list_topics.__doc__)
+    subparsers.add_parser('list-topics', help=list_topics.__doc__)
 
     create_topic_parser = subparsers.add_parser('create-topic', help=create_topic.__doc__)
-    create_topic_parser.add_argument('topic-name')
+    create_topic_parser.add_argument('topic_name')
 
     publish_parser = subparsers.add_parser('publish', help=publish_messages.__doc__)
-    publish_parser.add_argument('topic-name')
+    publish_parser.add_argument('topic_name')
     publish_parser.add_argument('message', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
 
     list_in_topic_parser = subparsers.add_parser('list-subscriptions-in-topic', help=list_subscriptions_in_topic.__doc__)
-    list_in_topic_parser.add_argument('topic-name')
+    list_in_topic_parser.add_argument('topic_name')
 
     list_in_project_parser = subparsers.add_parser('list-subscriptions-in-project', help=list_subscriptions_in_project.__doc__)
 
     create_sub_parser = subparsers.add_parser('create-subscription', help=create_subscription.__doc__)
-    create_sub_parser.add_argument('topic-name')
-    create_sub_parser.add_argument('subscription-name')
+    create_sub_parser.add_argument('topic_name')
+    create_sub_parser.add_argument('subscription_name')
 
     receive_parser = subparsers.add_parser('receive-messages', help=receive_messages.__doc__)
-    receive_parser.add_argument('subscription-name')
+    receive_parser.add_argument('subscription_name')
 
     args = parser.parse_args()
 

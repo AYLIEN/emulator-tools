@@ -20,12 +20,14 @@
 
 import argparse
 import datetime
+import json
+import sys
 
 from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 
 
-def create_table(project_id, instance_id, table_id):
+def create_table(project_id, instance_id, table_id, data):
     ''' Create a Bigtable table
 
     :type project_id: str
@@ -42,6 +44,10 @@ def create_table(project_id, instance_id, table_id):
     instance = client.instance(instance_id)
     table = instance.table(table_id)
 
+
+    body = json.loads(data.read())
+    column_families = { family['name']: None for family in body['column_families'] }
+
     # Check whether table exists in an instance.
     # Create table if it does not exists.
     print('Checking if table {} exists...'.format(table_id))
@@ -49,24 +55,58 @@ def create_table(project_id, instance_id, table_id):
         print('Table {} already exists.'.format(table_id))
     else:
         print('Creating the {} table.'.format(table_id))
-        table.create()
+        table.create(column_families=column_families)
         print('Created table {}.'.format(table_id))
 
     return client, instance, table
 
+def list_tables(project_id, instance_id):
+    client = bigtable.Client(project=project_id, admin=True)
+    instance = client.instance(instance_id)
+
+    tables = instance.list_tables()
+    print('Listing tables in current project...')
+    if tables != []:
+        for tbl in tables:
+            print(tbl.table_id)
+
+def write(project_id, instance_id, table_id, data):
+    client = bigtable.Client(project=project_id, admin=True)
+    instance = client.instance(instance_id)
+    table = instance.table(table_id)
+
+    body = json.loads(data.read())
+
+    for row_body in body['rows']:
+        row_key = row_body['rowkey']
+        row = table.direct_row(row_key)
+
+        for col in row_body['columns']:
+            family_id, column_id = col['key'].split(':')
+            if 'timestamp' in col:
+                timestamp = datetime.datetime.fromtimestamp(col['timestamp'])
+            else:
+                timestamp = datetime.datetime.utcnow()
+            row.set_cell(family_id, column_id, col['value'])
+
+        row.commit()
+
+        print('Successfully wrote row {}.'.format(row_key))
+
+def read(project_id, instance_id, table_id):
+    client = bigtable.Client(project=project_id, admin=True)
+    instance = client.instance(instance_id)
+    table = instance.table(table_id)
+
+    rows = table.read_rows()
+
+    for row in rows:
+        print('Row',row.row_key, row.to_dict())
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
-    parser.add_argument('command',
-                        help='create. \
-                        Operation to perform on table.')
-    parser.add_argument(
-        '--table',
-        help='Cloud Bigtable Table name.',
-        default='Hello-Bigtable')
 
     parser.add_argument('project_id',
                         help='Your Cloud Platform project ID.')
@@ -74,10 +114,27 @@ if __name__ == '__main__':
         'instance_id',
         help='ID of the Cloud Bigtable instance to connect to.')
 
-    args = parser.parse_args()
+    parser.add_argument('command',
+                        help='create-table, list-tables, read or write. \
+                        Operation to perform on table.')
+    parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
 
-    if args.command.lower() == 'create':
-        create_table(args.project_id, args.instance_id, args.table)
+    parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+
+    args = parser.parse_args()
+    print(args)
+
+    if args.command.lower() == 'create-table':
+        create_table(args.project_id, args.instance_id, args.table, args.data)
+    elif args.command.lower() == 'list-tables':
+        list_tables(args.project_id, args.instance_id)
+    elif args.command.lower() == 'write':
+        write(args.project_id, args.instance_id, args.table, args.data)
+    elif args.command.lower() == 'read':
+        read(args.project_id, args.instance_id, args.table)
     else:
-        print('Command should be either create.\n Use argument -h,\
+        print('Command should be either create-table list-tables read or write.\n Use argument -h,\
                --help to show help and exit.')
