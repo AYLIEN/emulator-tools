@@ -26,6 +26,8 @@ import sys
 from google.cloud import bigtable
 from google.cloud.bigtable import column_family
 
+import warnings
+warnings.filterwarnings("ignore", "Your application has authenticated using end user credentials")
 
 def create_table(project_id, instance_id, table_id, data):
     ''' Create a Bigtable table
@@ -152,27 +154,46 @@ if __name__ == '__main__':
         'instance_id',
         help='ID of the Cloud Bigtable instance to connect to.')
 
-    parser.add_argument('command',
-                        help='create-table, list-tables, read or write. \
-                        Operation to perform on table.')
-    parser.add_argument(
+    subparsers = parser.add_subparsers(dest='command')
+
+    list_tables_parser = subparsers.add_parser('list-tables', help=list_tables.__doc__)
+
+    create_table_parser = subparsers.add_parser('create-table', help=create_table.__doc__)
+
+    create_table_parser.add_argument(
         'table',
         help='Cloud Bigtable Table name.',
         default='test')
 
-    parser.add_argument(
+    read_table_parser = subparsers.add_parser('read', help=read.__doc__)
+
+    read_table_parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
+
+    read_table_parser.add_argument(
         '--json',
         help='JSON output format for read',
         action='store_true',
         default=False)
 
-    parser.add_argument(
+    read_table_parser.add_argument(
         '--limit',
         help='limit number of outputs for read command. default is unlimited.',
         type=int,
         default=None)
 
-    parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+    write_table_parser = subparsers.add_parser('write', help=write.__doc__)
+
+    write_table_parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
+
+    create_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+    write_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+
 
     args = parser.parse_args()
 
