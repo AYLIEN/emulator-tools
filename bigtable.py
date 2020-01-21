@@ -84,24 +84,62 @@ def write(project_id, instance_id, table_id, data):
         for col in row_body['columns']:
             family_id, column_id = col['key'].split(':')
             if 'timestamp' in col:
-                timestamp = datetime.datetime.fromtimestamp(col['timestamp'])
+                timestamp = datetime.datetime.utcfromtimestamp(col['timestamp'])
             else:
                 timestamp = datetime.datetime.utcnow()
-            row.set_cell(family_id, column_id, col['value'])
+
+            value = col['value']
+            if type(value) == int:
+                value = (value).to_bytes((value.bit_length() + 7), byteorder='big')
+            else:
+                value = value.encode('utf-8')
+
+            row.set_cell(family_id, column_id, value, timestamp=timestamp)
 
         row.commit()
 
         print('Successfully wrote row {}.'.format(row_key))
 
-def read(project_id, instance_id, table_id):
+def read(project_id, instance_id, table_id, json_output=False, limit=None):
     client = bigtable.Client(project=project_id, admin=True)
     instance = client.instance(instance_id)
     table = instance.table(table_id)
 
-    rows = table.read_rows()
+    rows = table.read_rows(limit=limit)
+
+    if json_output:
+        output = []
 
     for row in rows:
-        print('Row',row.row_key, row.to_dict())
+        if json_output:
+            columns = []
+
+            for family, cells in row.cells.items():
+                for key, col in cells.items():
+                    col = col[0]
+
+                    try:
+                        decoded_value = col.value.decode('utf-8')
+                    except UnicodeDecodeError:
+                        decoded_value = int.from_bytes(col.value, 'big')
+
+                    columns.append({
+                        'key': '{}:{}'.format(family, key.decode()),
+                        'value': decoded_value,
+                        'timestamp': col.timestamp.timestamp()
+                    })
+
+            output.append({
+                'rowkey': row.row_key.decode(),
+                'columns': columns
+            })
+        else:
+            print('Row',row.row_key, row.to_dict())
+
+    if json_output:
+        print(json.dumps({
+            'rows': output
+        }))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -122,10 +160,21 @@ if __name__ == '__main__':
         help='Cloud Bigtable Table name.',
         default='test')
 
+    parser.add_argument(
+        '--json',
+        help='JSON output format for read',
+        action='store_true',
+        default=False)
+
+    parser.add_argument(
+        '--limit',
+        help='limit number of outputs for read command. default is unlimited.',
+        type=int,
+        default=None)
+
     parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
 
     args = parser.parse_args()
-    print(args)
 
     if args.command.lower() == 'create-table':
         create_table(args.project_id, args.instance_id, args.table, args.data)
@@ -134,7 +183,7 @@ if __name__ == '__main__':
     elif args.command.lower() == 'write':
         write(args.project_id, args.instance_id, args.table, args.data)
     elif args.command.lower() == 'read':
-        read(args.project_id, args.instance_id, args.table)
+        read(args.project_id, args.instance_id, args.table, args.json, args.limit)
     else:
         print('Command should be either create-table list-tables read or write.\n Use argument -h,\
                --help to show help and exit.')
