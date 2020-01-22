@@ -25,6 +25,7 @@ import sys
 
 from google.cloud import bigtable
 from google.cloud.bigtable import column_family
+from google.cloud.bigtable.row_filters import RowKeyRegexFilter
 
 import warnings
 warnings.filterwarnings("ignore", "Your application has authenticated using end user credentials")
@@ -102,12 +103,16 @@ def write(project_id, instance_id, table_id, data):
 
         print('Successfully wrote row {}.'.format(row_key))
 
-def read(project_id, instance_id, table_id, json_output=False, limit=None):
+def read(project_id, instance_id, table_id, json_output=False, limit=None, rowkey=None):
     client = bigtable.Client(project=project_id, admin=True)
     instance = client.instance(instance_id)
     table = instance.table(table_id)
 
-    rows = table.read_rows(limit=limit)
+    filters = None
+    if rowkey is not None:
+        filters = RowKeyRegexFilter(rowkey)
+
+    rows = table.read_rows(limit=limit, filter_=filters)
 
     if json_output:
         output = []
@@ -184,6 +189,11 @@ if __name__ == '__main__':
         type=int,
         default=None)
 
+    read_table_parser.add_argument(
+        '--rowkey',
+        help='get a specific rowkey',
+        default=None)
+
     write_table_parser = subparsers.add_parser('write', help=write.__doc__)
 
     write_table_parser.add_argument(
@@ -204,7 +214,7 @@ if __name__ == '__main__':
     elif args.command.lower() == 'write':
         write(args.project_id, args.instance_id, args.table, args.data)
     elif args.command.lower() == 'read':
-        read(args.project_id, args.instance_id, args.table, args.json, args.limit)
+        read(args.project_id, args.instance_id, args.table, args.json, args.limit, args.rowkey)
     else:
         print('Command should be either create-table list-tables read or write.\n Use argument -h,\
                --help to show help and exit.')
