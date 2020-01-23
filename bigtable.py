@@ -22,6 +22,7 @@ import argparse
 import datetime
 import json
 import sys
+import struct
 
 from google.cloud import bigtable
 from google.cloud.bigtable import column_family
@@ -73,10 +74,12 @@ def list_tables(project_id, instance_id):
         for tbl in tables:
             print(tbl.table_id)
 
-def write(project_id, instance_id, table_id, data):
+def write(project_id, instance_id, table_id, schema_file, data):
     client = bigtable.Client(project=project_id, admin=True)
     instance = client.instance(instance_id)
     table = instance.table(table_id)
+
+    schema = json.loads(schema_file.read())
 
     body = json.loads(data.read())
 
@@ -91,9 +94,16 @@ def write(project_id, instance_id, table_id, data):
             else:
                 timestamp = datetime.datetime.utcnow()
 
+            schema_family = next((x for x in schema['column_families'] if x['name'] == family_id), None)
+            schema_column = next((x for x in schema_family['columns'] if x['key'] == column_id), None)
+
+            schema_type = schema_column['type']
+
             value = col['value']
-            if type(value) == int:
-                value = (value).to_bytes((value.bit_length() + 7), byteorder='big')
+            if schema_type == 'long':
+                value = struct.pack(">q", value)
+            elif schema_type == 'double':
+                value = struct.pack(">d", value)
             else:
                 value = value.encode('utf-8')
 
@@ -103,10 +113,12 @@ def write(project_id, instance_id, table_id, data):
 
         print('Successfully wrote row {}.'.format(row_key))
 
-def read(project_id, instance_id, table_id, json_output=False, limit=None, rowkey=None):
+def read(project_id, instance_id, table_id, schema_file, json_output=False, limit=None, rowkey=None):
     client = bigtable.Client(project=project_id, admin=True)
     instance = client.instance(instance_id)
     table = instance.table(table_id)
+
+    schema = json.loads(schema_file.read())
 
     filters = None
     if rowkey is not None:
@@ -125,10 +137,16 @@ def read(project_id, instance_id, table_id, json_output=False, limit=None, rowke
                 for key, col in cells.items():
                     col = col[0]
 
-                    try:
+                    schema_family = next((x for x in schema['column_families'] if x['name'] == family), None)
+                    schema_column = next((x for x in schema_family['columns'] if x['key'] == key.decode('utf-8')), None)
+
+                    schema_type = schema_column['type']
+                    if schema_type == 'long':
+                        decoded_value = struct.unpack(">q", col.value)[0]
+                    elif schema_type == 'double':
+                        decoded_value = struct.unpack(">d", col.value)[0]
+                    else:
                         decoded_value = col.value.decode('utf-8')
-                    except UnicodeDecodeError:
-                        decoded_value = int.from_bytes(col.value, 'big')
 
                     columns.append({
                         'key': '{}:{}'.format(family, key.decode()),
@@ -178,6 +196,11 @@ if __name__ == '__main__':
         default='test')
 
     read_table_parser.add_argument(
+        'schema',
+        type=argparse.FileType('r'),
+        help='The table schema file address. See tables directory.')
+
+    read_table_parser.add_argument(
         '--json',
         help='JSON output format for read',
         action='store_true',
@@ -201,6 +224,11 @@ if __name__ == '__main__':
         help='Cloud Bigtable Table name.',
         default='test')
 
+    write_table_parser.add_argument(
+        'schema',
+        type=argparse.FileType('r'),
+        help='The table schema file address. See tables directory.')
+
     create_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
     write_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
 
@@ -212,9 +240,9 @@ if __name__ == '__main__':
     elif args.command.lower() == 'list-tables':
         list_tables(args.project_id, args.instance_id)
     elif args.command.lower() == 'write':
-        write(args.project_id, args.instance_id, args.table, args.data)
+        write(args.project_id, args.instance_id, args.table, args.schema, args.data)
     elif args.command.lower() == 'read':
-        read(args.project_id, args.instance_id, args.table, args.json, args.limit, args.rowkey)
+        read(args.project_id, args.instance_id, args.table, args.schema, args.json, args.limit, args.rowkey)
     else:
         print('Command should be either create-table list-tables read or write.\n Use argument -h,\
                --help to show help and exit.')
