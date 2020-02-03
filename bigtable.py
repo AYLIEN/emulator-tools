@@ -104,6 +104,8 @@ def write(project_id, instance_id, table_id, schema_file, data):
                 value = struct.pack(">q", value)
             elif schema_type == 'double':
                 value = struct.pack(">d", value)
+            elif schema_type == 'list_double':
+                value = struct.pack(f'>{len(value)}d', *value)
             else:
                 value = value.encode('utf-8')
 
@@ -139,12 +141,14 @@ def read(project_id, instance_id, table_id, schema_file, json_output=False, limi
 
                     schema_family = next((x for x in schema['column_families'] if x['name'] == family), None)
                     schema_column = next((x for x in schema_family['columns'] if x['key'] == key.decode('utf-8')), None)
-
                     schema_type = schema_column['type']
                     if schema_type == 'long':
                         decoded_value = struct.unpack(">q", col.value)[0]
                     elif schema_type == 'double':
                         decoded_value = struct.unpack(">d", col.value)[0]
+                    elif schema_type == 'list_double':
+                        encoding = ">{}d".format(int(len(col.value) / 8))
+                        decoded_value = struct.unpack(encoding, col.value)
                     else:
                         decoded_value = col.value.decode('utf-8')
 
