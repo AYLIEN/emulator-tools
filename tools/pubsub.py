@@ -21,9 +21,6 @@ import argparse
 import time
 import sys
 
-import warnings
-warnings.filterwarnings("ignore", "Your application has authenticated using end user credentials")
-
 def list_topics(project_id):
     """Lists all Pub/Sub topics in the given project."""
     from google.cloud import pubsub_v1

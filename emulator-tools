@@ -1,0 +1,149 @@
+#!/usr/bin/env python
+
+"""Tools for interacting with Google Cloud Emulators"""
+
+import argparse
+import sys
+
+import tools.bigtable as bigtable
+import tools.pubsub as pubsub
+
+import warnings
+warnings.filterwarnings("ignore", "Your application has authenticated using end user credentials")
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    tools_parsers = parser.add_subparsers(dest='tool')
+
+    bigtable_parser = tools_parsers.add_parser('bigtable')
+
+    bigtable_parser.add_argument('project_id',
+                        help='Your Cloud Platform project ID.')
+    bigtable_parser.add_argument(
+        'instance_id',
+        help='ID of the Cloud Bigtable instance to connect to.')
+
+    bigtable_command_parsers = bigtable_parser.add_subparsers(dest='command')
+
+    bigtable_list_tables_parser = bigtable_command_parsers.add_parser('list-tables', help=bigtable.list_tables.__doc__)
+
+    bigtable_create_table_parser = bigtable_command_parsers.add_parser('create-table', help=bigtable.create_table.__doc__)
+
+    bigtable_create_table_parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
+
+    bigtable_read_table_parser = bigtable_command_parsers.add_parser('read', help=bigtable.read.__doc__)
+
+    bigtable_read_table_parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
+
+    bigtable_read_table_parser.add_argument(
+        'schema',
+        type=argparse.FileType('r'),
+        help='The table schema file address. See tables directory.')
+
+    bigtable_read_table_parser.add_argument(
+        '--json',
+        help='JSON output format for read',
+        action='store_true',
+        default=False)
+
+    bigtable_read_table_parser.add_argument(
+        '--limit',
+        help='limit number of outputs for read command. default is unlimited.',
+        type=int,
+        default=None)
+
+    bigtable_read_table_parser.add_argument(
+        '--rowkey',
+        help='get a specific rowkey',
+        default=None)
+
+    bigtable_write_table_parser = bigtable_command_parsers.add_parser('write', help=bigtable.write.__doc__)
+
+    bigtable_write_table_parser.add_argument(
+        'table',
+        help='Cloud Bigtable Table name.',
+        default='test')
+
+    bigtable_write_table_parser.add_argument(
+        'schema',
+        type=argparse.FileType('r'),
+        help='The table schema file address. See tables directory.')
+
+    bigtable_create_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+    bigtable_write_table_parser.add_argument('data', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+
+    pubsub_parser = tools_parsers.add_parser('pubsub')
+
+    pubsub_parser.add_argument('project_id', help='Your Google Cloud project ID')
+
+    pubsub_command_parsers = pubsub_parser.add_subparsers(dest='command')
+    pubsub_command_parsers.add_parser('list-topics', help=pubsub.list_topics.__doc__)
+
+    pubsub_create_topic_parser = pubsub_command_parsers.add_parser('create-topic', help=pubsub.create_topic.__doc__)
+    pubsub_create_topic_parser.add_argument('topic_name')
+
+    pubsub_publish_parser = pubsub_command_parsers.add_parser('publish', help=pubsub.publish_messages.__doc__)
+    pubsub_publish_parser.add_argument('topic_name')
+    pubsub_publish_parser.add_argument('message', default=sys.stdin, type=argparse.FileType('r'), nargs='?')
+
+    pubsub_list_in_topic_parser = pubsub_command_parsers.add_parser('list-subscriptions-in-topic', help=pubsub.list_subscriptions_in_topic.__doc__)
+    pubsub_list_in_topic_parser.add_argument('topic_name')
+
+    pubsub_list_in_project_parser = pubsub_command_parsers.add_parser('list-subscriptions-in-project', help=pubsub.list_subscriptions_in_project.__doc__)
+
+    pubsub_create_sub_parser = pubsub_command_parsers.add_parser('create-subscription', help=pubsub.create_subscription.__doc__)
+    pubsub_create_sub_parser.add_argument('topic_name')
+    pubsub_create_sub_parser.add_argument('subscription_name')
+
+    pubsub_receive_parser = pubsub_command_parsers.add_parser('receive-messages', help=pubsub.receive_messages.__doc__)
+    pubsub_receive_parser.add_argument('subscription_name')
+
+    args = parser.parse_args()
+
+    tool = args.tool.lower() if args.tool else None
+
+    if tool == "bigtable":
+        command = args.command.lower() if args.command else None
+
+        if command == 'create-table':
+            bigtable.create_table(args.project_id, args.instance_id, args.table, args.data)
+        elif command == 'list-tables':
+            bigtable.list_tables(args.project_id, args.instance_id)
+        elif command == 'write':
+            bigtable.write(args.project_id, args.instance_id, args.table, args.schema, args.data)
+        elif command == 'read':
+            bigtable.read(args.project_id, args.instance_id, args.table, args.schema, args.json, args.limit, args.rowkey)
+        else:
+            pubsub_command_parsers.print_help()
+    elif tool == "pubsub":
+        command = args.command.lower() if args.command else None
+
+        if command == 'list-topics':
+            pubsub.list_topics(args.project_id)
+        elif command == 'create-topic':
+            pubsub.create_topic(args.project_id, args.topic_name)
+        elif command == 'publish':
+            pubsub.publish_messages(args.project_id, args.topic_name, args.message)
+        elif command == 'list-subscriptions-in-topic':
+            pubsub.list_subscriptions_in_topic(args.project_id, args.topic_name)
+        elif command == 'list-subscriptions-in-project':
+            pubsub.list_subscriptions_in_project(args.project_id)
+        elif command == 'create-subscription':
+            pubsub.create_subscription(
+                args.project_id, args.topic_name, args.subscription_name)
+        elif command == 'receive-messages':
+            pubsub.receive_messages(args.project_id, args.subscription_name)
+        else:
+            pubsub_command_parsers.print_help()
+    else:
+        parser.print_help()
+

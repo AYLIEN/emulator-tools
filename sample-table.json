@@ -1,0 +1,21 @@
+{
+  "column_families": [{
+    "name": "i",
+    "columns": [{
+      "key": "id",
+      "type": "long"
+    }, {
+      "key": "score",
+      "type": "double"
+    }, {
+      "key": "title",
+      "type": "string"
+    }]
+  }, {
+    "name": "m",
+    "columns": [{
+      "key": "namespace",
+      "type": "string"
+    }]
+  }]
+}

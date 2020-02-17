@@ -1,0 +1,26 @@
+{
+  "rows": [
+    {
+      "rowkey": "testing#12345",
+      "columns": [
+        {
+          "key": "i:id",
+          "value": 1234,
+          "timestamp": 1579607960.80492
+        },
+        {
+          "key": "i:title",
+          "value": "Here's a test title for you"
+        },
+        {
+          "key": "i:score",
+          "value": 1.5
+        },
+        {
+          "key": "m:namespace",
+          "value": "core"
+        }
+      ]
+    }
+  ]
+}
