@@ -1,0 +1,9 @@
+{
+  "metadata": { "environment": "staging" },
+  "payload": {
+    "id": "123"
+  },
+  "timestamp": "2019-09-26T12:22:00Z",
+  "type": "custom_event",
+  "version": "0.0.1"
+}
