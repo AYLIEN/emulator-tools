@@ -35,16 +35,6 @@ $(gcloud beta emulators bigtable env-init)
 echo $BIGTABLE_EMULATOR_HOST
 ```
 
-# Tools
-
-To use the tools, you need to install python and the requirements, if using `pyenv`:
-
-```
-pyenv install $(cat .python-version)
-pyenv local
-pip install -r requirements.txt
-```
-
 ## PubSub
 
 After [starting the emulator](#start), [set the environment](#set-environment) and get started with setting up pubsub.
@@ -219,6 +209,16 @@ emulator-tools pubsub $project create-topic test
 emulator-tools pubsub $project create-subscription test test
 
 cat ./messages/love-letter.json | emulator-tools pubsub $project publish test
+```
+
+# Development
+
+To develop the tools, you need to install python and the requirements, if using `pyenv`:
+
+```
+pyenv install $(cat .python-version)
+pyenv local
+pip install -r requirements.txt
 ```
 
 # Known Issues
