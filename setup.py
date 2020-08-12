@@ -6,7 +6,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
      name='emulator-tools',  
-     version='0.1.0',
+     version='0.1.1',
      scripts=['emulator-tools'] ,
      author="AYLIEN Engineering",
      author_email="eng-team@aylien.com",

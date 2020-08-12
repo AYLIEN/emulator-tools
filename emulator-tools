@@ -106,6 +106,7 @@ if __name__ == '__main__':
 
     pubsub_receive_parser = pubsub_command_parsers.add_parser('receive-messages', help=pubsub.receive_messages.__doc__)
     pubsub_receive_parser.add_argument('subscription_name')
+    pubsub_receive_parser.add_argument('--long', action="store_true")
 
     args = parser.parse_args()
 
@@ -141,7 +142,7 @@ if __name__ == '__main__':
             pubsub.create_subscription(
                 args.project_id, args.topic_name, args.subscription_name)
         elif command == 'receive-messages':
-            pubsub.receive_messages(args.project_id, args.subscription_name)
+            pubsub.receive_messages(args.project_id, args.subscription_name, args.long)
         else:
             pubsub_command_parsers.print_help()
     else:

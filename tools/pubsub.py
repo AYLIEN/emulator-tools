@@ -99,7 +99,7 @@ def create_subscription(project_id, topic_name, subscription_name):
 
     print('Subscription created: {}'.format(subscription))
 
-def receive_messages(project_id, subscription_name):
+def receive_messages(project_id, subscription_name, long=False):
     """Receives messages from a pull subscription."""
     # [START pubsub_subscriber_async_pull]
     # [START pubsub_quickstart_subscriber]
@@ -117,7 +117,17 @@ def receive_messages(project_id, subscription_name):
         project_id, subscription_name)
 
     def callback(message):
-        print('Received message: {}'.format(message))
+
+        if long:
+            print("Received message data: {}".format(message.data))
+            if message.attributes:
+                print("Reveived message attributes:")
+                for key in message.attributes:
+                    value = message.attributes.get(key)
+                    print("{}: {}".format(key, value))
+        else:
+            print('Received message: {}'.format(message))
+
         message.ack()
 
     subscriber.subscribe(subscription_path, callback=callback)
@@ -159,6 +169,7 @@ if __name__ == "__main__":
 
     receive_parser = subparsers.add_parser('receive-messages', help=receive_messages.__doc__)
     receive_parser.add_argument('subscription_name')
+    receive_parser.add_argument('--long', action="store_true")
 
     args = parser.parse_args()
 
@@ -176,4 +187,4 @@ if __name__ == "__main__":
         create_subscription(
             args.project_id, args.topic_name, args.subscription_name)
     elif args.command == 'receive-messages':
-        receive_messages(args.project_id, args.subscription_name)
+        receive_messages(args.project_id, args.subscription_name, args.long)
